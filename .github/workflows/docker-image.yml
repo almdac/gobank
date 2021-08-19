@@ -15,7 +15,7 @@ jobs:
       uses: actions/checkout@v2
     
     - name: Builds the Docker Test Image
-      run: docker build . --target test --tag bank_test:$(date +%s)
+      run: docker build . --target test -t bank_test
       
     - name: Run tests
       run: docker run bank_test
