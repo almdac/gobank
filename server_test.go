@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"net/http"
 	"net/http/httptest"
+	"sync"
 	"testing"
 
 	"github.com/labstack/echo/v4"
@@ -48,27 +49,8 @@ func TestCreateAccount(t *testing.T) {
 
 }
 
-func TestWithdraw(t *testing.T) {
+func testWithdraw(t *testing.T, bank *Bank, body Value, wb *sync.WaitGroup) {
 	e := echo.New()
-	bank := &Bank{
-		Accounts: map[string]*Account{
-			"almirmdacunha@gmail.com": {
-				User: User{
-					Name:  "Almir Menezes da Cunha Júnior",
-					Email: "almirmdacunha@gmail.com",
-				},
-				Pass:    "ut9na5eb",
-				Balance: 50,
-			},
-		},
-	}
-
-	// Get body
-	body := &Withdraw{
-		Email: "almirmdacunha@gmail.com",
-		Pass:  "ut9na5eb",
-		Value: 20,
-	}
 	bodyBytes, _ := json.Marshal(body)
 	bodyReader := bytes.NewReader(bodyBytes)
 
@@ -89,4 +71,61 @@ func TestWithdraw(t *testing.T) {
 		// Validate if balance was correctly modified
 		assert.Equal(t, oldBalance-body.Value, acc.Balance)
 	}
+
+	wb.Done()
+}
+
+func testDeposit(t *testing.T, bank *Bank, body Value, wb *sync.WaitGroup) {
+	e := echo.New()
+	bodyBytes, _ := json.Marshal(body)
+	bodyReader := bytes.NewReader(bodyBytes)
+
+	// Create request and recorder
+	req := httptest.NewRequest(http.MethodPut, "/acc/deposit", bodyReader)
+	req.Header.Set(echo.HeaderContentType, echo.MIMEApplicationJSON)
+	rec := httptest.NewRecorder()
+
+	// Create echo context
+	c := e.NewContext(req, rec)
+
+	// Validate
+	acc := bank.Accounts[body.Email]
+	oldBalance := acc.Balance
+	if assert.NoError(t, bank.Deposit(c)) {
+		assert.Equal(t, http.StatusOK, rec.Code)
+
+		// Validate if balance was correctly modified
+		assert.Equal(t, oldBalance+body.Value, acc.Balance)
+	}
+
+	wb.Done()
+}
+
+func TestBalanceChange(t *testing.T) {
+	bank := &Bank{
+		Accounts: map[string]*Account{
+			"almirmdacunha@gmail.com": {
+				User: User{
+					Name:  "Almir Menezes da Cunha Júnior",
+					Email: "almirmdacunha@gmail.com",
+				},
+				Pass:    "ut9na5eb",
+				Balance: 50,
+			},
+		},
+	}
+
+	// Get body
+	body := Value{
+		Email: "almirmdacunha@gmail.com",
+		Pass:  "ut9na5eb",
+		Value: 20,
+	}
+
+	var wb sync.WaitGroup
+	wb.Add(2)
+	go testDeposit(t, bank, body, &wb)
+	go testWithdraw(t, bank, body, &wb)
+
+	wb.Wait()
 }
