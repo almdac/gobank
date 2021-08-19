@@ -6,7 +6,7 @@ COPY . .
 
 FROM dev AS test
 WORKDIR /server
-CMD [ "go", "test" ]
+CMD [ "go", "test", "-v" ]
 
 FROM dev AS build
 WORKDIR /server

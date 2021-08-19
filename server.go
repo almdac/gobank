@@ -14,7 +14,6 @@ type (
 	}
 
 	Account struct {
-		Mutex   sync.Mutex
 		User    User    `json:"user"`
 		Pass    string  `json:"pass"`
 		Balance float64 `json:"balance"`
@@ -22,6 +21,7 @@ type (
 
 	Bank struct {
 		Accounts map[string]*Account
+		Mutexes  map[string]*sync.Mutex
 	}
 
 	Value struct {
@@ -39,6 +39,7 @@ func (b *Bank) CreateAccount(c echo.Context) error {
 	}
 
 	b.Accounts[acc.User.Email] = acc
+	b.Mutexes[acc.User.Email] = new(sync.Mutex)
 
 	return c.JSON(http.StatusOK, acc)
 }
@@ -54,10 +55,11 @@ func (b *Bank) Withdraw(c echo.Context) error {
 	}
 
 	acc := b.Accounts[withdrawn.Email]
+	mutex := b.Mutexes[withdrawn.Email]
 
-	acc.Mutex.Lock()
+	mutex.Lock()
 	acc.Balance -= withdrawn.Value
-	defer acc.Mutex.Unlock()
+	defer mutex.Unlock()
 
 	return c.JSON(http.StatusOK, acc)
 }
@@ -73,10 +75,11 @@ func (b *Bank) Deposit(c echo.Context) error {
 	}
 
 	acc := b.Accounts[deposit.Email]
+	mutex := b.Mutexes[deposit.Email]
 
-	acc.Mutex.Lock()
+	mutex.Lock()
 	acc.Balance += deposit.Value
-	defer acc.Mutex.Unlock()
+	defer mutex.Unlock()
 
 	return c.JSON(http.StatusOK, acc)
 }
@@ -86,6 +89,7 @@ func main() {
 
 	bank := &Bank{
 		Accounts: make(map[string]*Account),
+		Mutexes:  make(map[string]*sync.Mutex),
 	}
 
 	e.POST("/acc/create", bank.CreateAccount)

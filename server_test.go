@@ -15,7 +15,8 @@ import (
 func TestCreateAccount(t *testing.T) {
 	e := echo.New()
 	bank := &Bank{
-		Accounts: map[string]*Account{},
+		Accounts: make(map[string]*Account),
+		Mutexes:  make(map[string]*sync.Mutex),
 	}
 
 	// Get body
@@ -112,6 +113,9 @@ func TestBalanceChange(t *testing.T) {
 				Pass:    "ut9na5eb",
 				Balance: 50,
 			},
+		},
+		Mutexes: map[string]*sync.Mutex{
+			"almirmdacunha@gmail.com": new(sync.Mutex),
 		},
 	}
 
