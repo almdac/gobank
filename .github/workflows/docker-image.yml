@@ -1,0 +1,21 @@
+name: Docker Image CI
+
+on:
+  push:
+    branches: [ main ]
+  pull_request:
+    branches: [ main ]
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v2
+    
+    - name: Builds the Docker Test Image
+      run: docker build . --target test --tag bank_test:$(date +%s)
+      
+    - name: Run tests
+      run: docker run bank_test
