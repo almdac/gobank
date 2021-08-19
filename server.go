@@ -78,7 +78,7 @@ func (b *Bank) Deposit(c echo.Context) error {
 	mutex := b.Mutexes[deposit.Email]
 
 	mutex.Lock()
-	acc.Balance += deposit.Value
+	acc.Balance -= deposit.Value
 	defer mutex.Unlock()
 
 	return c.JSON(http.StatusOK, acc)
